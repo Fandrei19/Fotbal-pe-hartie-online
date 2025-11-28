@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fotbal pe Hârtie Online</title>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 10px;
+            touch-action: none;
+        }
+
+        h1 { color: #2c3e50; margin: 10px 0; font-size: 1.5rem; }
+
+        #connection-screen {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 400px;
+            z-index: 20;
+        }
+
+        .conn-box {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            background: #f9f9f9;
+        }
+
+        input {
+            padding: 10px;
+            font-size: 1rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            width: 80%;
+            text-align: center;
+        }
+
+        #my-id-display {
+            font-family: monospace;
+            font-size: 1.2rem;
+            background: #eee;
+            padding: 5px;
+            border-radius: 4px;
+            user-select: all;
+            color: #d35400;
+            font-weight: bold;
+        }
+
+        #game-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #game-info {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+            text-align: center;
+            width: 100%;
+            max-width: 340px;
+        }
+
+        #status { font-weight: bold; font-size: 1.2rem; display: block; margin-bottom: 5px; }
+        .p1-text { color: #e74c3c; } 
+        .p2-text { color: #3498db; }
+        .win-text { color: #27ae60; font-size: 1.4rem; }
+
+        canvas {
+    background-color: #fff;
+    border: 2px solid #333;
+    border-radius: 4px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M12 2v20M2 12h20" stroke="black" stroke-width="3"/></svg>') 12 12, crosshair;
+    max-width: 100%;
+    height: auto;
+}
+
+        button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            margin: 5px;
+            font-weight: bold;
+        }
+        
+        button.secondary { background-color: #3498db; }
+        button:disabled { background-color: #95a5a6; cursor: not-allowed; }
+
+        .rules {
+            margin-top: 15px;
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            text-align: center;
+            max-width: 300px;
+        }
+        
+        #loading { display: none; color: #e67e22; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>Fotbal pe Hârtie Online</h1>
+
+    <div id="connection-screen">
+        <h3>Lobby Multiplayer</h3>
+        
+        <div class="conn-box">
+            <p><strong>Opțiunea 1: Fii Gazdă (Player 1)</strong></p>
+            <button onclick="createGame()" id="btn-create">Creează Joc</button>
+            <div id="host-area" style="display:none; margin-top:10px;">
+                <p>Trimite acest cod prietenului tău:</p>
+                <div id="my-id-display">Se generează...</div>
+                <p id="waiting-msg">Așteptare adversar...</p>
+            </div>
+        </div>
+
+        <div class="conn-box">
+            <p><strong>Opțiunea 2: Intră în joc (Player 2)</strong></p>
+            <input type="text" id="remote-id-input" placeholder="Introdu codul primit">
+            <br><br>
+            <button onclick="joinGame()" id="btn-join" class="secondary">Intră în Joc</button>
+        </div>
+        <div id="loading">Se conectează...</div>
+    </div>
+
+    <div id="game-container">
+        <div id="game-info">
+            <div style="margin-bottom:5px; font-size:0.9rem; color:#666;">
+                Tu ești: <span id="my-role" style="font-weight:bold;"></span>
+            </div>
+            <span id="status" class="p1-text">Așteptare start...</span>
+            <span id="message" style="font-size: 0.9rem; color:#555;"></span>
+        </div>
+
+        <canvas id="gameCanvas" width="360" height="560"></canvas>
+
+        <div style="margin-top: 10px;">
+            <button onclick="location.reload()" style="background-color:#e74c3c;">Ieșire / Joc Nou</button>
+        </div>
+
+        <div class="rules">
+            Joci online! Mutările se trimit automat.<br>
+            Dacă conexiunea se pierde, dă refresh.
+        </div>
+    </div>
+
+    <script>
+        let peer = null;
+        let conn = null;
+        let myPlayerIndex = 0; 
+        
+        function createGame() {
+            document.getElementById('btn-create').disabled = true;
+            document.getElementById('btn-join').disabled = true;
+            document.getElementById('host-area').style.display = 'block';
+
+            peer = new Peer(); 
+
+            peer.on('open', (id) => {
+                document.getElementById('my-id-display').innerText = id;
+            });
+
+            peer.on('connection', (c) => {
+                conn = c;
+                setupConnection();
+                myPlayerIndex = 1;
+                startGameOnline();
+            });
+        }
+
+        function joinGame() {
+            const hostId = document.getElementById('remote-id-input').value.trim();
+            if (!hostId) return alert("Introdu codul gazdei!");
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('btn-create').disabled = true;
+            document.getElementById('btn-join').disabled = true;
+
+            peer = new Peer();
+            peer.on('open', () => {
+                conn = peer.connect(hostId);
+                setupConnection();
+                myPlayerIndex = 2;
+            });
+        }
+
+        function setupConnection() {
+            conn.on('open', () => {
+                if (myPlayerIndex === 2) startGameOnline();
+            });
+
+            conn.on('data', (data) => {
+                handleNetworkData(data);
+            });
+
+            conn.on('close', () => {
+                alert("Adversarul s-a deconectat!");
+                location.reload();
+            });
+        }
+
+        function startGameOnline() {
+            document.getElementById('connection-screen').style.display = 'none';
+            document.getElementById('game-container').style.display = 'flex';
+            
+            const roleEl = document.getElementById('my-role');
+            if (myPlayerIndex === 1) {
+                roleEl.innerText = "Jucător 1 (ROȘU) - Ataci JOS";
+                roleEl.style.color = "#e74c3c";
+            } else {
+                roleEl.innerText = "Jucător 2 (ALBASTRU) - Ataci SUS";
+                roleEl.style.color = "#3498db";
+            }
+
+            resetBoard();
+        }
+
+        function sendMove(gx, gy) {
+            if (conn && conn.open) {
+                conn.send({ type: 'move', x: gx, y: gy });
+            }
+        }
+
+        function handleNetworkData(data) {
+            if (data.type === 'move') {
+                processMove(data.x, data.y, false);
+            }
+        }
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const statusEl = document.getElementById('status');
+        const msgEl = document.getElementById('message');
+
+        const cellSize = 40; 
+        const offsetX = 20; 
+        const offsetY = 40;
+        const gridW = 8;
+        const gridH = 10; 
+
+        let currentPlayer = 1; 
+        let currentPos = { x: 4, y: 6 }; 
+        let visitedEdges = new Set();
+        let visitedNodes = new Set();
+        let gameOver = false;
+
+        function addSolidEdge(x1, y1, x2, y2) {
+            visitedEdges.add(`${x1},${y1}-${x2},${y2}`);
+            visitedEdges.add(`${x2},${y2}-${x1},${y1}`);
+        }
+
+        function initBoundaries() {
+            for (let x = 0; x <= gridW; x++) {
+                if (x !== 4) visitedNodes.add(`${x},1`);  
+                if (x !== 4) visitedNodes.add(`${x},11`); 
+                for (let y = 1; y <= 11; y++) {
+                    if (x === 0 || x === gridW) visitedNodes.add(`${x},${y}`);
+                }
+            }
+            for (let y = 1; y < 11; y++) {
+                addSolidEdge(0, y, 0, y+1);       
+                addSolidEdge(gridW, y, gridW, y+1); 
+            }
+            for (let x = 0; x < 3; x++) addSolidEdge(x, 1, x+1, 1);
+            for (let x = 5; x < 8; x++) addSolidEdge(x, 1, x+1, 1); 
+            for (let x = 0; x < 3; x++) addSolidEdge(x, 11, x+1, 11);
+            for (let x = 5; x < 8; x++) addSolidEdge(x, 11, x+1, 11);
+        }
+
+        function resetBoard() {
+            currentPlayer = 1;
+            currentPos = { x: 4, y: 6 }; 
+            visitedEdges.clear();
+            visitedNodes.clear();
+            initBoundaries();
+            visitedNodes.add(`${currentPos.x},${currentPos.y}`);
+            
+            gameOver = false;
+            updateUI();
+            draw();
+        }
+
+        function getMousePos(evt) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+            const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+        }
+
+        function gridToPixel(gx, gy) {
+            return { x: (gx * cellSize) + offsetX, y: (gy * cellSize) + offsetY };
+        }
+
+        function pixelToGrid(px, py) {
+            return { x: Math.round((px - offsetX) / cellSize), y: Math.round((py - offsetY) / cellSize) };
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.beginPath(); ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 1;
+            for (let i = 0; i <= 8; i++) {
+                const s = gridToPixel(i, 0); const e = gridToPixel(i, 12);
+                ctx.moveTo(s.x, s.y); ctx.lineTo(e.x, e.y);
+            }
+            for (let i = 0; i <= 12; i++) {
+                const s = gridToPixel(0, i); const e = gridToPixel(8, i);
+                ctx.moveTo(s.x, s.y); ctx.lineTo(e.x, e.y);
+            }
+            ctx.stroke();
+
+            ctx.beginPath(); ctx.strokeStyle = '#333'; ctx.lineWidth = 3;
+            const tl = gridToPixel(0, 1); const bl = gridToPixel(0, 11);
+            const tr = gridToPixel(8, 1); const br = gridToPixel(8, 11);
+            const gL = gridToPixel(3,0).x; const gR = gridToPixel(5,0).x;
+            ctx.moveTo(tl.x, tl.y); ctx.lineTo(bl.x, bl.y);
+            ctx.moveTo(tr.x, tr.y); ctx.lineTo(br.x, br.y);
+            ctx.moveTo(tl.x, tl.y); ctx.lineTo(gL, tl.y);
+            ctx.moveTo(gR, tr.y); ctx.lineTo(tr.x, tr.y);
+            ctx.moveTo(bl.x, bl.y); ctx.lineTo(gL, bl.y);
+            ctx.moveTo(gR, br.y); ctx.lineTo(br.x, br.y);
+            ctx.stroke();
+
+            ctx.fillStyle = 'rgba(231, 76, 60, 0.15)';
+            ctx.fillRect(gL, gridToPixel(0,0).y, 2*cellSize, cellSize);
+            ctx.strokeRect(gL, gridToPixel(0,0).y, 2*cellSize, cellSize);
+            ctx.fillStyle = 'rgba(52, 152, 219, 0.15)';
+            ctx.fillRect(gL, gridToPixel(0,11).y, 2*cellSize, cellSize);
+            ctx.strokeRect(gL, gridToPixel(0,11).y, 2*cellSize, cellSize);
+
+            visitedEdges.forEach(k => {
+                const p = k.split('-');
+                const p1 = p[0].split(','); const p2 = p[1].split(',');
+                const s = gridToPixel(p1[0], p1[1]); const e = gridToPixel(p2[0], p2[1]);
+                ctx.beginPath(); ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 2; ctx.lineCap='round';
+                ctx.moveTo(s.x, s.y); ctx.lineTo(e.x, e.y); ctx.stroke();
+            });
+
+            const b = gridToPixel(currentPos.x, currentPos.y);
+            ctx.beginPath(); ctx.fillStyle = currentPlayer === 1 ? '#e74c3c' : '#3498db';
+            ctx.arc(b.x, b.y, 6, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+        }
+
+        function isValidMove(nx, ny) {
+            const dx = Math.abs(nx - currentPos.x);
+            const dy = Math.abs(ny - currentPos.y);
+            if (dx > 1 || dy > 1 || (dx === 0 && dy === 0)) return false;
+            if (ny < 0 || ny > 12 || nx < 0 || nx > 8) return false;
+            if ((ny === 0 || ny === 12) && (nx < 3 || nx > 5)) return false;
+            if (ny === 1 && (nx < 0 || nx > 8)) return false;
+            if (ny === 11 && (nx < 0 || nx > 8)) return false;
+            const e1 = `${currentPos.x},${currentPos.y}-${nx},${ny}`;
+            const e2 = `${nx},${ny}-${currentPos.x},${currentPos.y}`;
+            if (visitedEdges.has(e1) || visitedEdges.has(e2)) return false;
+            if (nx === 0 && currentPos.x === 0) return false;
+            if (nx === 8 && currentPos.x === 8) return false;
+            return true;
+        }
+
+        function checkBlocked() {
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    if (dx===0 && dy===0) continue;
+                    if (isValidMove(currentPos.x+dx, currentPos.y+dy)) return false;
+                }
+            }
+            return true;
+        }
+
+        function processMove(gx, gy, isMyInput) {
+            if (isValidMove(gx, gy)) {
+                if (isMyInput) {
+                    sendMove(gx, gy);
+                }
+
+                const edge = `${currentPos.x},${currentPos.y}-${gx},${gy}`;
+                visitedEdges.add(edge);
+
+                const targetKey = `${gx},${gy}`;
+                const isBounce = visitedNodes.has(targetKey);
+
+                currentPos = {x: gx, y: gy};
+                visitedNodes.add(targetKey);
+                draw();
+
+                if (currentPos.y === 0) { endGame("Jucătorul 2 (ALBASTRU)"); return; }
+                if (currentPos.y === 12) { endGame("Jucătorul 1 (ROȘU)"); return; }
+                if (checkBlocked()) {
+                    const w = currentPlayer === 1 ? "Jucătorul 2 (ALBASTRU)" : "Jucătorul 1 (ROȘU)";
+                    endGame("BLOCAJ! " + w);
+                    return;
+                }
+
+                if (isBounce) {
+                    msgEl.innerText = "Ricoșeu! Încă o mutare!";
+                    msgEl.style.color = "#d35400";
+                } else {
+                    currentPlayer = currentPlayer === 1 ? 2 : 1;
+                    msgEl.innerText = "";
+                    updateUI();
+                }
+            }
+        }
+
+        function handleInput(e) {
+            if (gameOver) return;
+            
+            if (currentPlayer !== myPlayerIndex) {
+                return;
+            }
+
+            const pos = getMousePos(e);
+            const gridPos = pixelToGrid(pos.x, pos.y);
+            
+            processMove(gridPos.x, gridPos.y, true);
+        }
+
+        function endGame(w) {
+            gameOver = true;
+            statusEl.innerText = `${w} a câștigat!`;
+            statusEl.className = "win-text";
+            msgEl.innerText = "Meci terminat.";
+        }
+
+        function updateUI() {
+    if(gameOver) return;
+    
+    let turnName = currentPlayer === 1 ? "Jucătorul 1" : "Jucătorul 2";
+    statusEl.innerText = `Rândul: ${turnName}`;
+    statusEl.className = currentPlayer === 1 ? 'p1-text' : 'p2-text';
+
+    if (currentPlayer === myPlayerIndex) {
+        msgEl.innerText = "E rândul tău!";
+        msgEl.style.color = "#27ae60";
+        
+        canvas.style.cursor = "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path d=\"M12 2v20M2 12h20\" stroke=\"black\" stroke-width=\"3\"/></svg>') 12 12, crosshair";
+    } else {
+        msgEl.innerText = "Așteaptă adversarul...";
+        msgEl.style.color = "#7f8c8d";
+        canvas.style.cursor = "not-allowed";
+    }
+}
+
+        canvas.addEventListener('mousedown', handleInput);
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(e); }, {passive: false});
+
+    </script>
+</body>
+</html>
