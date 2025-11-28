@@ -83,14 +83,14 @@
         .win-text { color: #27ae60; font-size: 1.4rem; }
 
         canvas {
-    background-color: #fff;
-    border: 2px solid #333;
-    border-radius: 4px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M12 2v20M2 12h20" stroke="black" stroke-width="3"/></svg>') 12 12, crosshair;
-    max-width: 100%;
-    height: auto;
-}
+            background-color: #fff;
+            border: 2px solid #333;
+            border-radius: 4px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M12 2v20M2 12h20" stroke="black" stroke-width="3"/></svg>') 12 12, crosshair;
+            max-width: 100%;
+            height: auto;
+        }
 
         button {
             padding: 10px 20px;
@@ -184,8 +184,7 @@
             peer.on('connection', (c) => {
                 conn = c;
                 setupConnection();
-                myPlayerIndex = 1;
-                startGameOnline();
+                myPlayerIndex = 1; 
             });
         }
 
@@ -207,7 +206,7 @@
 
         function setupConnection() {
             conn.on('open', () => {
-                if (myPlayerIndex === 2) startGameOnline();
+                startGameOnline();
             });
 
             conn.on('data', (data) => {
@@ -447,23 +446,22 @@
         }
 
         function updateUI() {
-    if(gameOver) return;
-    
-    let turnName = currentPlayer === 1 ? "Jucătorul 1" : "Jucătorul 2";
-    statusEl.innerText = `Rândul: ${turnName}`;
-    statusEl.className = currentPlayer === 1 ? 'p1-text' : 'p2-text';
+            if(gameOver) return;
+            
+            let turnName = currentPlayer === 1 ? "Jucătorul 1" : "Jucătorul 2";
+            statusEl.innerText = `Rândul: ${turnName}`;
+            statusEl.className = currentPlayer === 1 ? 'p1-text' : 'p2-text';
 
-    if (currentPlayer === myPlayerIndex) {
-        msgEl.innerText = "E rândul tău!";
-        msgEl.style.color = "#27ae60";
-        
-        canvas.style.cursor = "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path d=\"M12 2v20M2 12h20\" stroke=\"black\" stroke-width=\"3\"/></svg>') 12 12, crosshair";
-    } else {
-        msgEl.innerText = "Așteaptă adversarul...";
-        msgEl.style.color = "#7f8c8d";
-        canvas.style.cursor = "not-allowed";
-    }
-}
+            if (currentPlayer === myPlayerIndex) {
+                msgEl.innerText = "E rândul tău!";
+                msgEl.style.color = "#27ae60";
+                canvas.style.cursor = "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path d=\"M12 2v20M2 12h20\" stroke=\"black\" stroke-width=\"3\"/></svg>') 12 12, crosshair";
+            } else {
+                msgEl.innerText = "Așteaptă adversarul...";
+                msgEl.style.color = "#7f8c8d";
+                canvas.style.cursor = "not-allowed";
+            }
+        }
 
         canvas.addEventListener('mousedown', handleInput);
         canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(e); }, {passive: false});
