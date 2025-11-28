@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fotbal pe Hârtie Online - Fast Connect</title>
+    <title>Fotbal pe Hârtie - Revanșă</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
         body {
@@ -21,7 +21,7 @@
 
         #connection-screen {
             background: white;
-            padding: 30px;
+            padding: 20px;
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             text-align: center;
@@ -30,14 +30,19 @@
             gap: 15px;
             max-width: 400px;
             z-index: 20;
+            width: 90%;
         }
 
         .conn-box {
             border: 1px solid #ddd;
             padding: 15px;
             border-radius: 8px;
-            margin-top: 10px;
             background: #f9f9f9;
+        }
+
+        #name-box {
+            background: #e8f6f3;
+            border: 2px solid #27ae60;
         }
 
         input {
@@ -47,17 +52,18 @@
             border-radius: 5px;
             width: 80%;
             text-align: center;
+            margin-top: 5px;
         }
 
-        #my-id-display {
-            font-family: monospace;
-            font-size: 1.2rem;
-            background: #eee;
-            padding: 5px;
-            border-radius: 4px;
-            user-select: all;
-            color: #d35400;
-            font-weight: bold;
+        #share-link-box {
+            background: #e8f8f5;
+            padding: 10px;
+            border: 1px dashed #27ae60;
+            margin-top: 10px;
+            word-break: break-all;
+            font-size: 0.9rem;
+            color: #27ae60;
+            display: none;
         }
 
         #game-container {
@@ -87,14 +93,13 @@
             border: 2px solid #333;
             border-radius: 4px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            /* Cursor Negru */
             cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M12 2v20M2 12h20" stroke="black" stroke-width="3"/></svg>') 12 12, crosshair;
             max-width: 100%;
             height: auto;
         }
 
         button {
-            padding: 10px 20px;
+            padding: 12px 20px;
             font-size: 1rem;
             cursor: pointer;
             background-color: #27ae60;
@@ -103,66 +108,81 @@
             border-radius: 5px;
             margin: 5px;
             font-weight: bold;
+            width: 100%;
         }
         
         button.secondary { background-color: #3498db; }
-        button:disabled { background-color: #95a5a6; cursor: not-allowed; }
-
-        .rules {
-            margin-top: 15px;
-            font-size: 0.85rem;
-            color: #7f8c8d;
-            text-align: center;
-            max-width: 300px;
-        }
         
-        #loading { display: none; color: #e67e22; font-weight: bold; }
+        /* Buton special Revanșă */
+        #rematch-area {
+            display: none; /* Ascuns la început */
+            margin-top: 15px;
+            padding: 10px;
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 8px;
+            text-align: center;
+            width: 100%;
+            max-width: 340px;
+        }
+        button.rematch-btn { background-color: #f39c12; color: #fff; }
+        button.rematch-btn:hover { background-color: #d68910; }
+
+        .rules { margin-top: 15px; font-size: 0.85rem; color: #7f8c8d; text-align: center; max-width: 300px; }
+        #loading { display: none; color: #e67e22; font-weight: bold; margin-top: 10px;}
     </style>
 </head>
 <body>
 
-    <h1>Fotbal pe Hârtie Online</h1>
+    <h1>Fotbal pe Hârtie</h1>
 
     <div id="connection-screen">
-        <h3>Lobby Multiplayer</h3>
-        
-        <div class="conn-box">
-            <p><strong>Opțiunea 1: Fii Gazdă (Player 1)</strong></p>
-            <button onclick="createGame()" id="btn-create">Creează Joc</button>
-            <div id="host-area" style="display:none; margin-top:10px;">
-                <p>Trimite acest cod prietenului tău:</p>
-                <div id="my-id-display">Se generează...</div>
-                <p id="waiting-msg">Așteptare adversar...</p>
+        <div class="conn-box" id="name-box">
+            <label for="username"><strong>Pasul 1: Cum te cheamă?</strong></label><br>
+            <input type="text" id="username" placeholder="Scrie numele tău aici..." value="Jucător">
+        </div>
+
+        <div class="conn-box" id="host-panel">
+            <p><strong>Pasul 2: Creează Joc</strong></p>
+            <button onclick="createGame()" id="btn-create">Generează Link</button>
+            <div id="loading-host" style="display:none; color:#e67e22;">Se generează...</div>
+            <div id="share-link-box">
+                <strong>Trimite acest link prietenului:</strong><br><br>
+                <span id="final-link" style="user-select: all;">...</span>
+                <br><br>
+                <small>Așteptare adversar...</small>
             </div>
         </div>
 
-        <div class="conn-box">
-            <p><strong>Opțiunea 2: Intră în joc (Player 2)</strong></p>
-            <input type="text" id="remote-id-input" placeholder="Introdu codul primit">
-            <br><br>
-            <button onclick="joinGame()" id="btn-join" class="secondary">Intră în Joc</button>
+        <div class="conn-box" id="manual-join">
+            <p style="margin:5px 0;"><strong>Sau intră cu cod manual:</strong></p>
+            <input type="text" id="remote-id-input" placeholder="Cod joc">
+            <button onclick="joinGameManual()" id="btn-join" class="secondary" style="margin-top:10px;">Intră</button>
         </div>
+
         <div id="loading">Se conectează...</div>
+        <div id="error-msg" style="color:red; display:none; margin-top:10px;"></div>
     </div>
 
     <div id="game-container">
         <div id="game-info">
             <div style="margin-bottom:5px; font-size:0.9rem; color:#666;">
-                Tu ești: <span id="my-role" style="font-weight:bold;"></span>
+                Salut, <span id="display-my-name" style="font-weight:bold;"></span>!
+                Ești: <span id="my-role" style="font-weight:bold;"></span>
             </div>
-            <span id="status" class="p1-text">Așteptare start...</span>
+            <span id="status" class="p1-text">Start...</span>
             <span id="message" style="font-size: 0.9rem; color:#555;"></span>
         </div>
 
         <canvas id="gameCanvas" width="360" height="560"></canvas>
 
-        <div style="margin-top: 10px;">
-            <button onclick="location.reload()" style="background-color:#e74c3c;">Ieșire / Joc Nou</button>
+        <div id="rematch-area">
+            <p id="rematch-status" style="margin:0 0 10px 0; font-weight:bold; color:#d35400;">Meci terminat!</p>
+            <button onclick="requestRematch()" id="btn-rematch" class="rematch-btn">Cere Revanșă</button>
         </div>
 
-        <div class="rules">
-            Joci online! Mutările se trimit automat.<br>
-            Dacă conexiunea se pierde, dă refresh.
+        <div style="margin-top: 10px;">
+            <button onclick="location.href=location.pathname" style="background-color:#e74c3c;">Ieșire Totală</button>
         </div>
     </div>
 
@@ -170,10 +190,16 @@
         let peer = null;
         let conn = null;
         let myPlayerIndex = 0; 
+        
+        let myName = "Eu";
+        let opponentName = "Adversar";
 
-        // CONFIGURARE SPECIALĂ GOOGLE PENTRU TELEFOANE
+        // Variabile pentru Revanșă
+        let myVoteRematch = false;
+        let opVoteRematch = false;
+
         const peerConfig = {
-            debug: 2,
+            debug: 1,
             config: {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
@@ -184,17 +210,41 @@
                 ]
             }
         };
+
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const gameId = urlParams.get('game');
+            if (gameId) {
+                document.getElementById('host-panel').style.display = 'none';
+                document.getElementById('manual-join').style.display = 'none';
+                const btn = document.getElementById('btn-join');
+                btn.innerText = "Intră în Joc";
+                btn.onclick = function() { joinGameAuto(gameId); };
+                document.getElementById('manual-join').style.display = 'block';
+                document.getElementById('remote-id-input').style.display = 'none'; 
+            }
+        };
+
+        function getMyName() {
+            const inputVal = document.getElementById('username').value.trim();
+            return inputVal || "Jucător Anonim";
+        }
         
         function createGame() {
+            myName = getMyName();
             document.getElementById('btn-create').disabled = true;
-            document.getElementById('btn-join').disabled = true;
-            document.getElementById('host-area').style.display = 'block';
+            document.getElementById('loading-host').style.display = 'block';
+            document.getElementById('username').disabled = true;
 
-            // Folosim config-ul Google
             peer = new Peer(null, peerConfig); 
 
             peer.on('open', (id) => {
-                document.getElementById('my-id-display').innerText = id;
+                document.getElementById('loading-host').style.display = 'none';
+                document.getElementById('share-link-box').style.display = 'block';
+                const currentUrl = window.location.href.split('?')[0];
+                const fullLink = `${currentUrl}?game=${id}`;
+                document.getElementById('final-link').innerText = fullLink;
+                document.getElementById('manual-join').style.display = 'none';
             });
 
             peer.on('connection', (c) => {
@@ -202,79 +252,111 @@
                 setupConnection();
                 myPlayerIndex = 1; 
             });
-            
-            peer.on('error', (err) => {
-                alert("Eroare PeerJS: " + err.type);
-            });
+
+            peer.on('error', (err) => showError(err.type));
         }
 
-        function joinGame() {
-            const hostId = document.getElementById('remote-id-input').value.trim();
-            if (!hostId) return alert("Introdu codul gazdei!");
+        function joinGameManual() {
+            myName = getMyName();
+            const id = document.getElementById('remote-id-input').value.trim();
+            if(id) joinGameAuto(id);
+        }
 
+        function joinGameAuto(hostId) {
+            myName = getMyName();
             document.getElementById('loading').style.display = 'block';
-            document.getElementById('btn-create').disabled = true;
             document.getElementById('btn-join').disabled = true;
+            document.getElementById('username').disabled = true;
 
-            // Folosim config-ul Google
             peer = new Peer(null, peerConfig);
 
             peer.on('open', () => {
-                conn = peer.connect(hostId, {
-                    reliable: true
-                });
+                conn = peer.connect(hostId, { reliable: true });
                 setupConnection();
                 myPlayerIndex = 2;
             });
 
             peer.on('error', (err) => {
-                alert("Eroare conexiune: " + err.type);
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('btn-join').disabled = false;
+                showError("Eroare: " + err.type);
             });
         }
 
         function setupConnection() {
             conn.on('open', () => {
-                // START SINCRONIZAT - Ambii pornesc aici
+                conn.send({ type: 'name', name: myName });
+                conn.send({ type: 'ping' });
                 startGameOnline();
             });
 
             conn.on('data', (data) => {
-                handleNetworkData(data);
+                if (data.type === 'move') {
+                    processMove(data.x, data.y, false);
+                }
+                if (data.type === 'name') {
+                    opponentName = data.name;
+                    updateUI(); 
+                }
+                // LOGICA DE REVANȘĂ - PRIMIRE
+                if (data.type === 'rematch_req') {
+                    opVoteRematch = true;
+                    document.getElementById('rematch-status').innerText = `${opponentName} vrea revanșă!`;
+                    checkRematchStart();
+                }
             });
 
             conn.on('close', () => {
                 alert("Adversarul s-a deconectat!");
-                location.reload();
+                location.href = location.pathname;
             });
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('error-msg');
+            el.style.display = 'block';
+            el.innerText = msg;
+            document.getElementById('loading').style.display = 'none';
         }
 
         function startGameOnline() {
             document.getElementById('connection-screen').style.display = 'none';
             document.getElementById('game-container').style.display = 'flex';
-            
+            document.getElementById('display-my-name').innerText = myName;
+
             const roleEl = document.getElementById('my-role');
             if (myPlayerIndex === 1) {
-                roleEl.innerText = "Jucător 1 (ROȘU) - Ataci JOS";
+                roleEl.innerText = "ROȘU (Ataci JOS)";
                 roleEl.style.color = "#e74c3c";
             } else {
-                roleEl.innerText = "Jucător 2 (ALBASTRU) - Ataci SUS";
+                roleEl.innerText = "ALBASTRU (Ataci SUS)";
                 roleEl.style.color = "#3498db";
             }
-
             resetBoard();
         }
 
-        function sendMove(gx, gy) {
+        // --- SISTEM REVANȘĂ ---
+        function requestRematch() {
+            myVoteRematch = true;
+            document.getElementById('btn-rematch').disabled = true;
+            document.getElementById('rematch-status').innerText = "Ai cerut revanșă. Așteaptă...";
+            
+            // Trimitem cererea la adversar
             if (conn && conn.open) {
-                conn.send({ type: 'move', x: gx, y: gy });
+                conn.send({ type: 'rematch_req' });
+            }
+            checkRematchStart();
+        }
+
+        function checkRematchStart() {
+            if (myVoteRematch && opVoteRematch) {
+                // Ambii sunt de acord -> Resetăm tot
+                resetBoard();
             }
         }
 
-        function handleNetworkData(data) {
-            if (data.type === 'move') {
-                processMove(data.x, data.y, false);
+        // --- LOGICA JOCULUI ---
+        function sendMove(gx, gy) {
+            if (conn && conn.open) {
+                conn.send({ type: 'move', x: gx, y: gy });
             }
         }
 
@@ -319,6 +401,7 @@
         }
 
         function resetBoard() {
+            // Resetare variabile joc
             currentPlayer = 1;
             currentPos = { x: 4, y: 6 }; 
             visitedEdges.clear();
@@ -326,7 +409,17 @@
             initBoundaries();
             visitedNodes.add(`${currentPos.x},${currentPos.y}`);
             
+            // Resetare UI și Stare Revanșă
             gameOver = false;
+            myVoteRematch = false;
+            opVoteRematch = false;
+            
+            // Ascundem zona de revanșă și reactivăm butonul
+            document.getElementById('rematch-area').style.display = 'none';
+            document.getElementById('btn-rematch').disabled = false;
+            document.getElementById('rematch-status').innerText = "Meci terminat!";
+
+            msgEl.innerText = "";
             updateUI();
             draw();
         }
@@ -429,7 +522,6 @@
 
                 const edge = `${currentPos.x},${currentPos.y}-${gx},${gy}`;
                 visitedEdges.add(edge);
-
                 const targetKey = `${gx},${gy}`;
                 const isBounce = visitedNodes.has(targetKey);
 
@@ -437,11 +529,14 @@
                 visitedNodes.add(targetKey);
                 draw();
 
-                if (currentPos.y === 0) { endGame("Jucătorul 2 (ALBASTRU)"); return; }
-                if (currentPos.y === 12) { endGame("Jucătorul 1 (ROȘU)"); return; }
+                const p1WinName = (myPlayerIndex === 1) ? myName : opponentName;
+                const p2WinName = (myPlayerIndex === 2) ? myName : opponentName;
+
+                if (currentPos.y === 0) { endGame(p2WinName + " (Albastru)"); return; }
+                if (currentPos.y === 12) { endGame(p1WinName + " (Roșu)"); return; }
                 if (checkBlocked()) {
-                    const w = currentPlayer === 1 ? "Jucătorul 2 (ALBASTRU)" : "Jucătorul 1 (ROȘU)";
-                    endGame("BLOCAJ! " + w);
+                    const w = currentPlayer === 1 ? p2WinName : p1WinName;
+                    endGame("BLOCAJ! " + w + " Câștigă");
                     return;
                 }
 
@@ -458,14 +553,9 @@
 
         function handleInput(e) {
             if (gameOver) return;
-            
-            if (currentPlayer !== myPlayerIndex) {
-                return;
-            }
-
+            if (currentPlayer !== myPlayerIndex) return;
             const pos = getMousePos(e);
             const gridPos = pixelToGrid(pos.x, pos.y);
-            
             processMove(gridPos.x, gridPos.y, true);
         }
 
@@ -474,15 +564,24 @@
             statusEl.innerText = `${w} a câștigat!`;
             statusEl.className = "win-text";
             msgEl.innerText = "Meci terminat.";
+            
+            // Afișăm zona de revanșă
+            document.getElementById('rematch-area').style.display = 'block';
         }
 
         function updateUI() {
             if(gameOver) return;
             
-            let turnName = currentPlayer === 1 ? "Jucătorul 1" : "Jucătorul 2";
-            statusEl.innerText = `Rândul: ${turnName}`;
-            statusEl.className = currentPlayer === 1 ? 'p1-text' : 'p2-text';
+            let turnName = "";
+            if (currentPlayer === 1) {
+                turnName = (myPlayerIndex === 1) ? myName : opponentName;
+            } else {
+                turnName = (myPlayerIndex === 2) ? myName : opponentName;
+            }
 
+            statusEl.innerText = `Rândul lui: ${turnName}`;
+            statusEl.className = currentPlayer === 1 ? 'p1-text' : 'p2-text';
+            
             if (currentPlayer === myPlayerIndex) {
                 msgEl.innerText = "E rândul tău!";
                 msgEl.style.color = "#27ae60";
