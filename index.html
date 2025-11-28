@@ -2,23 +2,93 @@
 <html lang="ro">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fotbal pe Hârtie - Revanșă</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fotbal pe Hârtie - Mobile Friendly</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
-        body {
+        /* --- CSS PENTRU RESPONSIVITATE --- */
+        html, body {
+            height: 100%; /* Ocupă tot ecranul */
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Previne scroll-ul paginii */
+            background-color: #f0f4f8;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
             display: flex;
             flex-direction: column;
             align-items: center;
-            background-color: #f0f4f8;
-            margin: 0;
-            padding: 10px;
-            touch-action: none;
+            padding: 5px; /* Padding mai mic pe mobil */
+            box-sizing: border-box;
+            touch-action: none; /* Previne zoom/scroll default pe canvas */
         }
 
-        h1 { color: #2c3e50; margin: 10px 0; font-size: 1.5rem; }
+        h1 {
+            color: #2c3e50;
+            margin: 5px 0;
+            font-size: 1.3rem; /* Titlu puțin mai mic */
+            flex-shrink: 0; /* Titlul nu se micșorează */
+        }
 
+        /* Containerul principal al jocului se va extinde să ocupe spațiul rămas */
+        #game-container {
+            display: none; /* Ascuns inițial */
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1; /* Ocupă tot spațiul vertical disponibil */
+            width: 100%;
+            overflow: hidden;
+        }
+
+        #game-info {
+            background: white;
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 5px;
+            text-align: center;
+            width: 95%;
+            max-width: 340px;
+            flex-shrink: 0; /* Info box nu se turtește */
+        }
+
+        /* --- CONTAINER PENTRU CANVAS RESPONSIV --- */
+        #canvas-wrapper {
+            flex-grow: 1; /* Ocupă tot spațiul rămas între info și butoane */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+
+        canvas {
+            background-color: #fff;
+            border: 2px solid #333;
+            border-radius: 4px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            /* Cursor Negru */
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M12 2v20M2 12h20" stroke="black" stroke-width="3"/></svg>') 12 12, crosshair;
+            
+            /* Canvas-ul se va dimensiona din JS, dar CSS-ul îl ajută să nu depășească */
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        /* --- ZONA DE JOS (BUTOANE) --- */
+        #bottom-controls {
+            flex-shrink: 0;
+            width: 100%;
+            text-align: center;
+            padding-bottom: 5px;
+        }
+
+        /* --- STILURI GENERALE --- */
         #connection-screen {
             background: white;
             padding: 20px;
@@ -27,30 +97,30 @@
             text-align: center;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 10px;
             max-width: 400px;
             z-index: 20;
             width: 90%;
+            margin-top: 20px;
+            max-height: 90%; /* Să nu iasă din ecran pe telefoane mici */
+            overflow-y: auto; /* Scroll dacă e nevoie în meniu */
         }
 
         .conn-box {
             border: 1px solid #ddd;
-            padding: 15px;
+            padding: 12px;
             border-radius: 8px;
             background: #f9f9f9;
         }
 
-        #name-box {
-            background: #e8f6f3;
-            border: 2px solid #27ae60;
-        }
+        #name-box { background: #e8f6f3; border: 2px solid #27ae60; }
 
         input {
-            padding: 10px;
+            padding: 8px;
             font-size: 1rem;
             border: 2px solid #ddd;
             border-radius: 5px;
-            width: 80%;
+            width: 85%;
             text-align: center;
             margin-top: 5px;
         }
@@ -61,45 +131,18 @@
             border: 1px dashed #27ae60;
             margin-top: 10px;
             word-break: break-all;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: #27ae60;
             display: none;
         }
 
-        #game-container {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        #game-info {
-            background: white;
-            padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            margin-bottom: 10px;
-            text-align: center;
-            width: 100%;
-            max-width: 340px;
-        }
-
-        #status { font-weight: bold; font-size: 1.2rem; display: block; margin-bottom: 5px; }
+        #status { font-weight: bold; font-size: 1.1rem; display: block; margin-bottom: 2px; }
         .p1-text { color: #e74c3c; } 
         .p2-text { color: #3498db; }
-        .win-text { color: #27ae60; font-size: 1.4rem; }
-
-        canvas {
-            background-color: #fff;
-            border: 2px solid #333;
-            border-radius: 4px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M12 2v20M2 12h20" stroke="black" stroke-width="3"/></svg>') 12 12, crosshair;
-            max-width: 100%;
-            height: auto;
-        }
+        .win-text { color: #27ae60; font-size: 1.3rem; }
 
         button {
-            padding: 12px 20px;
+            padding: 10px 15px;
             font-size: 1rem;
             cursor: pointer;
             background-color: #27ae60;
@@ -109,26 +152,26 @@
             margin: 5px;
             font-weight: bold;
             width: 100%;
+            max-width: 300px;
         }
         
         button.secondary { background-color: #3498db; }
         
-        /* Buton special Revanșă */
         #rematch-area {
-            display: none; /* Ascuns la început */
-            margin-top: 15px;
-            padding: 10px;
+            display: none;
+            margin: 5px auto;
+            padding: 8px;
             background: #fff3cd;
             border: 1px solid #ffeeba;
             border-radius: 8px;
             text-align: center;
-            width: 100%;
+            width: 95%;
             max-width: 340px;
         }
-        button.rematch-btn { background-color: #f39c12; color: #fff; }
+        button.rematch-btn { background-color: #f39c12; color: #fff; margin: 0; width: 90%;}
         button.rematch-btn:hover { background-color: #d68910; }
 
-        .rules { margin-top: 15px; font-size: 0.85rem; color: #7f8c8d; text-align: center; max-width: 300px; }
+        .rules { margin-top: 5px; font-size: 0.75rem; color: #7f8c8d; text-align: center; max-width: 300px; }
         #loading { display: none; color: #e67e22; font-weight: bold; margin-top: 10px;}
     </style>
 </head>
@@ -143,13 +186,13 @@
         </div>
 
         <div class="conn-box" id="host-panel">
-            <p><strong>Pasul 2: Creează Joc</strong></p>
+            <p style="margin:5px 0;"><strong>Pasul 2: Creează Joc</strong></p>
             <button onclick="createGame()" id="btn-create">Generează Link</button>
             <div id="loading-host" style="display:none; color:#e67e22;">Se generează...</div>
             <div id="share-link-box">
-                <strong>Trimite acest link prietenului:</strong><br><br>
-                <span id="final-link" style="user-select: all;">...</span>
-                <br><br>
+                <strong>Trimite acest link:</strong><br>
+                <span id="final-link" style="user-select: all; font-size: 0.8rem;">...</span>
+                <br>
                 <small>Așteptare adversar...</small>
             </div>
         </div>
@@ -166,23 +209,25 @@
 
     <div id="game-container">
         <div id="game-info">
-            <div style="margin-bottom:5px; font-size:0.9rem; color:#666;">
-                Salut, <span id="display-my-name" style="font-weight:bold;"></span>!
-                Ești: <span id="my-role" style="font-weight:bold;"></span>
+            <div style="margin-bottom:2px; font-size:0.85rem; color:#666;">
+                <span id="display-my-name" style="font-weight:bold;"></span>
+                (<span id="my-role" style="font-weight:bold;"></span>)
             </div>
             <span id="status" class="p1-text">Start...</span>
-            <span id="message" style="font-size: 0.9rem; color:#555;"></span>
+            <span id="message" style="font-size: 0.85rem; color:#555;"></span>
         </div>
 
-        <canvas id="gameCanvas" width="360" height="560"></canvas>
+        <div id="canvas-wrapper">
+            <canvas id="gameCanvas"></canvas>
+        </div>
 
         <div id="rematch-area">
-            <p id="rematch-status" style="margin:0 0 10px 0; font-weight:bold; color:#d35400;">Meci terminat!</p>
+            <p id="rematch-status" style="margin:0 0 5px 0; font-weight:bold; color:#d35400; font-size: 0.9rem;">Meci terminat!</p>
             <button onclick="requestRematch()" id="btn-rematch" class="rematch-btn">Cere Revanșă</button>
         </div>
 
-        <div style="margin-top: 10px;">
-            <button onclick="location.href=location.pathname" style="background-color:#e74c3c;">Ieșire Totală</button>
+        <div id="bottom-controls">
+            <button onclick="location.href=location.pathname" style="background-color:#e74c3c; margin-top: 5px; padding: 8px;">Ieșire Totală</button>
         </div>
     </div>
 
@@ -194,7 +239,6 @@
         let myName = "Eu";
         let opponentName = "Adversar";
 
-        // Variabile pentru Revanșă
         let myVoteRematch = false;
         let opVoteRematch = false;
 
@@ -212,6 +256,10 @@
         };
 
         window.onload = function() {
+            // Încercăm să redimensionăm la start
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
             const urlParams = new URLSearchParams(window.location.search);
             const gameId = urlParams.get('game');
             if (gameId) {
@@ -289,14 +337,8 @@
             });
 
             conn.on('data', (data) => {
-                if (data.type === 'move') {
-                    processMove(data.x, data.y, false);
-                }
-                if (data.type === 'name') {
-                    opponentName = data.name;
-                    updateUI(); 
-                }
-                // LOGICA DE REVANȘĂ - PRIMIRE
+                if (data.type === 'move') processMove(data.x, data.y, false);
+                if (data.type === 'name') { opponentName = data.name; updateUI(); }
                 if (data.type === 'rematch_req') {
                     opVoteRematch = true;
                     document.getElementById('rematch-status').innerText = `${opponentName} vrea revanșă!`;
@@ -324,58 +366,96 @@
 
             const roleEl = document.getElementById('my-role');
             if (myPlayerIndex === 1) {
-                roleEl.innerText = "ROȘU (Ataci JOS)";
+                roleEl.innerText = "ROȘU (Jos)";
                 roleEl.style.color = "#e74c3c";
             } else {
-                roleEl.innerText = "ALBASTRU (Ataci SUS)";
+                roleEl.innerText = "ALBASTRU (Sus)";
                 roleEl.style.color = "#3498db";
             }
+            // Redimensionăm din nou când intrăm în joc pentru a fi siguri
+            setTimeout(resizeCanvas, 100);
             resetBoard();
         }
 
-        // --- SISTEM REVANȘĂ ---
         function requestRematch() {
             myVoteRematch = true;
             document.getElementById('btn-rematch').disabled = true;
             document.getElementById('rematch-status').innerText = "Ai cerut revanșă. Așteaptă...";
-            
-            // Trimitem cererea la adversar
-            if (conn && conn.open) {
-                conn.send({ type: 'rematch_req' });
-            }
+            if (conn && conn.open) conn.send({ type: 'rematch_req' });
             checkRematchStart();
         }
 
         function checkRematchStart() {
-            if (myVoteRematch && opVoteRematch) {
-                // Ambii sunt de acord -> Resetăm tot
-                resetBoard();
-            }
+            if (myVoteRematch && opVoteRematch) resetBoard();
         }
 
-        // --- LOGICA JOCULUI ---
         function sendMove(gx, gy) {
-            if (conn && conn.open) {
-                conn.send({ type: 'move', x: gx, y: gy });
-            }
+            if (conn && conn.open) conn.send({ type: 'move', x: gx, y: gy });
         }
 
+        // --- LOGICA JOCULUI ȘI REDIMENSIONARE ---
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const statusEl = document.getElementById('status');
         const msgEl = document.getElementById('message');
 
-        const cellSize = 40; 
-        const offsetX = 20; 
-        const offsetY = 40;
+        // Variabilele devin dinamice (let in loc de const)
+        let cellSize = 40; 
+        let offsetX = 20; 
+        let offsetY = 40;
         const gridW = 8;
         const gridH = 10; 
+
+        // Dimensiunile logice originale pentru calculul proporțiilor
+        const ORIGINAL_LOGICAL_WIDTH = 360; // (8*40) + 2*20
+        const ORIGINAL_LOGICAL_HEIGHT = 560; // (12*40) + 2*40
+        const TARGET_ASPECT_RATIO = ORIGINAL_LOGICAL_WIDTH / ORIGINAL_LOGICAL_HEIGHT;
 
         let currentPlayer = 1; 
         let currentPos = { x: 4, y: 6 }; 
         let visitedEdges = new Set();
         let visitedNodes = new Set();
         let gameOver = false;
+
+        // --- FUNCȚIA MAGICĂ PENTRU RESPONSIVITATE ---
+        function resizeCanvas() {
+            const container = document.getElementById('canvas-wrapper');
+            if (!container) return;
+            
+            // Cât spațiu avem disponibil?
+            const availW = container.clientWidth;
+            const availH = container.clientHeight;
+
+            if (availW === 0 || availH === 0) return; // Nu redimensiona dacă e ascuns
+
+            const currentAspectRatio = availW / availH;
+            let finalW, finalH;
+
+            // Calculăm dimensiunile pentru a păstra proporția și a încăpea în ecran
+            if (currentAspectRatio > TARGET_ASPECT_RATIO) {
+                // Ecranul e mai lat decât avem nevoie, ne limităm după înălțime
+                finalH = availH;
+                finalW = finalH * TARGET_ASPECT_RATIO;
+            } else {
+                // Ecranul e mai înalt (tipic telefon), ne limităm după lățime
+                finalW = availW;
+                finalH = finalW / TARGET_ASPECT_RATIO;
+            }
+
+            // Setăm rezoluția internă a canvasului pentru claritate maximă
+            canvas.width = finalW;
+            canvas.height = finalH;
+
+            // Recalculăm factorul de scalare și noile dimensiuni de desenare
+            const scaleFactor = finalW / ORIGINAL_LOGICAL_WIDTH;
+            
+            cellSize = 40 * scaleFactor;
+            offsetX = 20 * scaleFactor;
+            offsetY = 40 * scaleFactor;
+
+            // Redesenăm imediat cu noile dimensiuni
+            draw();
+        }
 
         function addSolidEdge(x1, y1, x2, y2) {
             visitedEdges.add(`${x1},${y1}-${x2},${y2}`);
@@ -401,7 +481,6 @@
         }
 
         function resetBoard() {
-            // Resetare variabile joc
             currentPlayer = 1;
             currentPos = { x: 4, y: 6 }; 
             visitedEdges.clear();
@@ -409,28 +488,34 @@
             initBoundaries();
             visitedNodes.add(`${currentPos.x},${currentPos.y}`);
             
-            // Resetare UI și Stare Revanșă
             gameOver = false;
             myVoteRematch = false;
             opVoteRematch = false;
             
-            // Ascundem zona de revanșă și reactivăm butonul
             document.getElementById('rematch-area').style.display = 'none';
             document.getElementById('btn-rematch').disabled = false;
             document.getElementById('rematch-status').innerText = "Meci terminat!";
 
             msgEl.innerText = "";
             updateUI();
-            draw();
+            // Asigurăm redimensionarea corectă la reset
+            resizeCanvas();
         }
 
         function getMousePos(evt) {
             const rect = canvas.getBoundingClientRect();
+            // Pe mobil folosim prima atingere, pe PC mouse-ul
             const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
             const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+            
+            // Calculăm poziția relativă în canvas
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+
+            // Nu mai avem nevoie de scaleX/scaleY suplimentar aici pentru că 
+            // am redimensionat rezoluția internă a canvasului (canvas.width/height)
+            // să se potrivească exact cu dimensiunea afișată.
+            return { x: x, y: y };
         }
 
         function gridToPixel(gx, gy) {
@@ -438,12 +523,15 @@
         }
 
         function pixelToGrid(px, py) {
+            // Folosim Math.round pentru a găsi cel mai apropiat punct
             return { x: Math.round((px - offsetX) / cellSize), y: Math.round((py - offsetY) / cellSize) };
         }
 
         function draw() {
+            // Curățăm tot canvasul
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+            // Desenăm Grila
             ctx.beginPath(); ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 1;
             for (let i = 0; i <= 8; i++) {
                 const s = gridToPixel(i, 0); const e = gridToPixel(i, 12);
@@ -455,6 +543,7 @@
             }
             ctx.stroke();
 
+            // Desenăm Conturul Terenului
             ctx.beginPath(); ctx.strokeStyle = '#333'; ctx.lineWidth = 3;
             const tl = gridToPixel(0, 1); const bl = gridToPixel(0, 11);
             const tr = gridToPixel(8, 1); const br = gridToPixel(8, 11);
@@ -467,6 +556,7 @@
             ctx.moveTo(gR, br.y); ctx.lineTo(br.x, br.y);
             ctx.stroke();
 
+            // Desenăm Porțile
             ctx.fillStyle = 'rgba(231, 76, 60, 0.15)';
             ctx.fillRect(gL, gridToPixel(0,0).y, 2*cellSize, cellSize);
             ctx.strokeRect(gL, gridToPixel(0,0).y, 2*cellSize, cellSize);
@@ -474,6 +564,7 @@
             ctx.fillRect(gL, gridToPixel(0,11).y, 2*cellSize, cellSize);
             ctx.strokeRect(gL, gridToPixel(0,11).y, 2*cellSize, cellSize);
 
+            // Desenăm Liniile Jucate
             visitedEdges.forEach(k => {
                 const p = k.split('-');
                 const p1 = p[0].split(','); const p2 = p[1].split(',');
@@ -482,9 +573,11 @@
                 ctx.moveTo(s.x, s.y); ctx.lineTo(e.x, e.y); ctx.stroke();
             });
 
+            // Desenăm Mingea
             const b = gridToPixel(currentPos.x, currentPos.y);
             ctx.beginPath(); ctx.fillStyle = currentPlayer === 1 ? '#e74c3c' : '#3498db';
-            ctx.arc(b.x, b.y, 6, 0, Math.PI*2); ctx.fill();
+            // Raza mingii se scalează și ea puțin
+            ctx.arc(b.x, b.y, 6 * (cellSize/40), 0, Math.PI*2); ctx.fill();
             ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
         }
 
@@ -516,9 +609,7 @@
 
         function processMove(gx, gy, isMyInput) {
             if (isValidMove(gx, gy)) {
-                if (isMyInput) {
-                    sendMove(gx, gy);
-                }
+                if (isMyInput) sendMove(gx, gy);
 
                 const edge = `${currentPos.x},${currentPos.y}-${gx},${gy}`;
                 visitedEdges.add(edge);
@@ -554,6 +645,12 @@
         function handleInput(e) {
             if (gameOver) return;
             if (currentPlayer !== myPlayerIndex) return;
+            
+            // Prevenim comportamentul default (scroll/zoom) la atingere
+            if (e.type === 'touchstart') {
+                e.preventDefault(); 
+            }
+
             const pos = getMousePos(e);
             const gridPos = pixelToGrid(pos.x, pos.y);
             processMove(gridPos.x, gridPos.y, true);
@@ -564,21 +661,12 @@
             statusEl.innerText = `${w} a câștigat!`;
             statusEl.className = "win-text";
             msgEl.innerText = "Meci terminat.";
-            
-            // Afișăm zona de revanșă
             document.getElementById('rematch-area').style.display = 'block';
         }
 
         function updateUI() {
             if(gameOver) return;
-            
-            let turnName = "";
-            if (currentPlayer === 1) {
-                turnName = (myPlayerIndex === 1) ? myName : opponentName;
-            } else {
-                turnName = (myPlayerIndex === 2) ? myName : opponentName;
-            }
-
+            let turnName = (currentPlayer === 1) ? ((myPlayerIndex === 1) ? myName : opponentName) : ((myPlayerIndex === 2) ? myName : opponentName);
             statusEl.innerText = `Rândul lui: ${turnName}`;
             statusEl.className = currentPlayer === 1 ? 'p1-text' : 'p2-text';
             
@@ -594,7 +682,8 @@
         }
 
         canvas.addEventListener('mousedown', handleInput);
-        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(e); }, {passive: false});
+        // Adăugăm { passive: false } pentru a putea folosi preventDefault() pe mobil
+        canvas.addEventListener('touchstart', handleInput, {passive: false});
 
     </script>
 </body>
