@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fotbal pe Hârtie Online</title>
+    <title>Fotbal pe Hârtie Online - Fast Connect</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
         body {
@@ -87,6 +87,7 @@
             border: 2px solid #333;
             border-radius: 4px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            /* Cursor Negru */
             cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M12 2v20M2 12h20" stroke="black" stroke-width="3"/></svg>') 12 12, crosshair;
             max-width: 100%;
             height: auto;
@@ -169,13 +170,28 @@
         let peer = null;
         let conn = null;
         let myPlayerIndex = 0; 
+
+        // CONFIGURARE SPECIALĂ GOOGLE PENTRU TELEFOANE
+        const peerConfig = {
+            debug: 2,
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:stun3.l.google.com:19302' },
+                    { urls: 'stun:stun4.l.google.com:19302' }
+                ]
+            }
+        };
         
         function createGame() {
             document.getElementById('btn-create').disabled = true;
             document.getElementById('btn-join').disabled = true;
             document.getElementById('host-area').style.display = 'block';
 
-            peer = new Peer(); 
+            // Folosim config-ul Google
+            peer = new Peer(null, peerConfig); 
 
             peer.on('open', (id) => {
                 document.getElementById('my-id-display').innerText = id;
@@ -185,6 +201,10 @@
                 conn = c;
                 setupConnection();
                 myPlayerIndex = 1; 
+            });
+            
+            peer.on('error', (err) => {
+                alert("Eroare PeerJS: " + err.type);
             });
         }
 
@@ -196,16 +216,27 @@
             document.getElementById('btn-create').disabled = true;
             document.getElementById('btn-join').disabled = true;
 
-            peer = new Peer();
+            // Folosim config-ul Google
+            peer = new Peer(null, peerConfig);
+
             peer.on('open', () => {
-                conn = peer.connect(hostId);
+                conn = peer.connect(hostId, {
+                    reliable: true
+                });
                 setupConnection();
                 myPlayerIndex = 2;
+            });
+
+            peer.on('error', (err) => {
+                alert("Eroare conexiune: " + err.type);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('btn-join').disabled = false;
             });
         }
 
         function setupConnection() {
             conn.on('open', () => {
+                // START SINCRONIZAT - Ambii pornesc aici
                 startGameOnline();
             });
 
